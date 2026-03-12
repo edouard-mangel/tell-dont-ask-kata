@@ -18,7 +18,7 @@ public class OrderCreationUseCase(
                           ?? throw new UnknownProductException();
             orderItems.Add(new OrderItem(product, itemRequest.Quantity));
         }
-        var order = new Order(orderItems);
+        var order = new CreatedOrder(orderItems);
         orderRepository.Save(order);
     }
 }

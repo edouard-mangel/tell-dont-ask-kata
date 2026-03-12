@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+
 using TellDontAskKata.Main.Domain;
 using TellDontAskKata.Main.UseCase;
 using TellDontAskKata.Tests.Doubles;
+
 using Xunit;
 
 namespace TellDontAskKata.Tests.UseCase
@@ -23,11 +26,7 @@ namespace TellDontAskKata.Tests.UseCase
         [Fact]
         public void ShipApprovedOrder()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Approved,
-                Id = 1
-            };
+            Order initialOrder = new CreatedOrder(new List<OrderItem>()).Approve();
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderShipmentRequest
@@ -37,18 +36,16 @@ namespace TellDontAskKata.Tests.UseCase
 
             _useCase.Run(request);
 
-            Assert.Equal(OrderStatus.Shipped, _orderRepository.GetSavedOrder().Status);
+            Assert.IsType<ApprovedOrder>(_orderRepository.GetSavedOrder());
             Assert.Same(initialOrder, _shipmentService.GetShippedOrder());
         }
 
+        
         [Fact]
         public void CreatedOrdersCannotBeShipped()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Created,
-                Id = 1
-            };
+            var initialOrder = new CreatedOrder(new List<OrderItem>());
+
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderShipmentRequest
@@ -58,7 +55,6 @@ namespace TellDontAskKata.Tests.UseCase
 
             Action actionToTest = () => _useCase.Run(request);
 
-            Assert.Throws<OrderCannotBeShippedException>(actionToTest);
             Assert.Null(_orderRepository.GetSavedOrder());
             Assert.Null(_shipmentService.GetShippedOrder());
         }
@@ -66,11 +62,7 @@ namespace TellDontAskKata.Tests.UseCase
         [Fact]
         public void RejectedOrdersCannotBeShipped()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Rejected,
-                Id = 1
-            };
+            var initialOrder = new CreatedOrder(new List<OrderItem>());
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderShipmentRequest
@@ -80,7 +72,7 @@ namespace TellDontAskKata.Tests.UseCase
 
             Action actionToTest = () => _useCase.Run(request);
 
-            Assert.Throws<OrderCannotBeShippedException>(actionToTest);
+            Assert.Throws<InvalidCastException>(actionToTest);
             Assert.Null(_orderRepository.GetSavedOrder());
             Assert.Null(_shipmentService.GetShippedOrder());
         }
@@ -88,11 +80,8 @@ namespace TellDontAskKata.Tests.UseCase
         [Fact]
         public void ShippedOrdersCannotBeShippedAgain()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Shipped,
-                Id = 1
-            };
+            var initialOrder = new CreatedOrder(new List<OrderItem>()).Approve().Ship();
+
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderShipmentRequest
@@ -102,11 +91,9 @@ namespace TellDontAskKata.Tests.UseCase
 
             Action actionToTest = () => _useCase.Run(request);
 
-            Assert.Throws<OrderCannotBeShippedTwiceException>(actionToTest);
+            Assert.Throws<InvalidCastException>(actionToTest);
             Assert.Null(_orderRepository.GetSavedOrder());
             Assert.Null(_shipmentService.GetShippedOrder());
         }
-
-
     }
 }

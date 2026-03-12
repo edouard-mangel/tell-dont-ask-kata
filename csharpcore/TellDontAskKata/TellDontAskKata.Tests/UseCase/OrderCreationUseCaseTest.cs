@@ -66,7 +66,7 @@ namespace TellDontAskKata.Tests.UseCase
             _useCase.Run(request);
 
             Order insertedOrder = _orderRepository.GetSavedOrder();
-            Assert.Equal(OrderStatus.Created, insertedOrder.Status);
+            Assert.IsType<CreatedOrder>(insertedOrder);
             Assert.Equal(23.20m, insertedOrder.Total);
             Assert.Equal(2.13m, insertedOrder.Tax);
             Assert.Equal("EUR", insertedOrder.Currency);

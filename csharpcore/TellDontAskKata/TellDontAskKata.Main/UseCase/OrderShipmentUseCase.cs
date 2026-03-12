@@ -10,8 +10,8 @@ public class OrderShipmentUseCase(
 {
     public void Run(OrderShipmentRequest request)
     {
-        var order = orderRepository.GetById(request.OrderId);
-        order.AssertCanBeShipped();
+        ApprovedOrder order = (ApprovedOrder)orderRepository.GetById(request.OrderId);
+        
         shipmentService.Ship(order);
         order.Ship();
         orderRepository.Save(order);

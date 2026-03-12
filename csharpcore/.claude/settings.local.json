@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:/Users/edoua/source/repos/tell-dont-ask-kata/csharpcore/TellDontAskKata\" && dotnet test 2>&1)"
+    ]
+  }
+}

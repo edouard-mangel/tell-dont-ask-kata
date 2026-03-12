@@ -4,66 +4,64 @@ using TellDontAskKata.Main.UseCase;
 
 namespace TellDontAskKata.Main.Domain
 {
-    public class Order
+    public abstract class Order
     {
-        public decimal Total { get; }
-        public string Currency { get; }
+        public decimal Total => Items.Sum(i => i.TaxedAmount);
+        public string Currency => "EUR";
         public IList<OrderItem> Items { get; }
-        public decimal Tax { get; }
-        public OrderStatus Status { get; set; }
-        public int Id { get; set; }
+        public decimal Tax => Items.Sum(x => x.Tax);
+        public uint Id { get; init; }
 
         /// <summary>
         /// Test constructor only.
         /// </summary>
-        public Order()
+        protected Order(IEnumerable<OrderItem> orderItems)
         {
+            Items = orderItems.ToList();
+            Id = 1;
         }
 
-        public Order(List<OrderItem> orderItems)
+        protected Order(Order other) { 
+            Items = other.Items;
+            Id = other.Id;
+        }
+    }
+
+    public sealed class CreatedOrder : Order
+    {
+        public CreatedOrder(IEnumerable<OrderItem> orderItems):base (orderItems){}
+
+        public ApprovedOrder Approve()
         {
-            Status = OrderStatus.Created;
-            Items = orderItems;
-            Currency = "EUR";
-            Total = orderItems.Sum(x => x.TaxedAmount);
-            Tax = orderItems.Sum(x => x.Tax);
+            return new ApprovedOrder(this);
         }
 
-        public void Approve()
+        public RejectedOrder Reject()
         {
-            if (IsShipped()) throw new ShippedOrdersCannotBeChangedException();
-            if (IsRejected()) throw new RejectedOrderCannotBeApprovedException();
-            Status = OrderStatus.Approved;
+            return new RejectedOrder(this);
         }
+    }
 
-        public void Reject()
+    public class RejectedOrder : Order
+    {
+        public RejectedOrder(CreatedOrder createdOrder):base(createdOrder){}
+
+    }
+
+    public class ApprovedOrder : Order
+    {
+        public ApprovedOrder(CreatedOrder createdOrder):base(createdOrder) {}
+
+        public ShippedOrder Ship()
         {
-            if (IsShipped()) throw new ShippedOrdersCannotBeChangedException();
-            if (IsApproved()) throw new ApprovedOrderCannotBeRejectedException();
-            Status = OrderStatus.Rejected;
+            return new ShippedOrder(this);
         }
+    }
 
-        private bool IsShipped() => Status == OrderStatus.Shipped;
-        private bool IsApproved() => Status == OrderStatus.Approved;
-        private bool IsRejected() => Status == OrderStatus.Rejected;
-
-        public void AssertCanBeShipped()
+    public class ShippedOrder: Order
+    {
+        public ShippedOrder(ApprovedOrder other) : base(other)
         {
-            if (Status == OrderStatus.Created || Status == OrderStatus.Rejected)
-            {
-                throw new OrderCannotBeShippedException();
-            }
-
-            if (Status == OrderStatus.Shipped)
-            {
-                throw new OrderCannotBeShippedTwiceException();
-            }
-        }
-
-        public void Ship()
-        {
-            AssertCanBeShipped();
-            Status = OrderStatus.Shipped;
         }
     }
 }

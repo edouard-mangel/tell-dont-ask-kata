@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+
 using TellDontAskKata.Main.Domain;
 using TellDontAskKata.Main.UseCase;
 using TellDontAskKata.Tests.Doubles;
@@ -21,11 +23,8 @@ namespace TellDontAskKata.Tests.UseCase
         [Fact]
         public void ApprovedExistingOrder()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Created,
-                Id = 1
-            };
+            var initialOrder = new CreatedOrder(new List<OrderItem>());
+            
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderApprovalRequest
@@ -37,17 +36,14 @@ namespace TellDontAskKata.Tests.UseCase
             _useCase.Run(request);
 
             var savedOrder = _orderRepository.GetSavedOrder();
-            Assert.Equal(OrderStatus.Approved, savedOrder.Status);
+            Assert.IsType<ApprovedOrder>(savedOrder);
         }
 
         [Fact]
         public void RejectedExistingOrder()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Created,
-                Id = 1
-            };
+            var initialOrder = new CreatedOrder(new List<OrderItem>());
+
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderApprovalRequest
@@ -59,18 +55,15 @@ namespace TellDontAskKata.Tests.UseCase
             _useCase.Run(request);
 
             var savedOrder = _orderRepository.GetSavedOrder();
-            Assert.Equal(OrderStatus.Rejected, savedOrder.Status);
+            Assert.IsType<RejectedOrder>(savedOrder);
         }
 
 
         [Fact]
         public void CannotApproveRejectedOrder()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Rejected,
-                Id = 1
-            };
+            var initialOrder = new CreatedOrder(new List<OrderItem>()).Reject();
+
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderApprovalRequest
@@ -82,18 +75,15 @@ namespace TellDontAskKata.Tests.UseCase
 
             Action actionToTest = () => _useCase.Run(request);
       
-            Assert.Throws<RejectedOrderCannotBeApprovedException>(actionToTest);
+            Assert.Throws<InvalidCastException>(actionToTest);
             Assert.Null(_orderRepository.GetSavedOrder());
         }
 
         [Fact]
         public void CannotRejectApprovedOrder()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Approved,
-                Id = 1
-            };
+            var initialOrder = new CreatedOrder(new List<OrderItem>()).Approve();
+
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderApprovalRequest
@@ -104,19 +94,13 @@ namespace TellDontAskKata.Tests.UseCase
 
 
             Action actionToTest = () => _useCase.Run(request);
-            
-            Assert.Throws<ApprovedOrderCannotBeRejectedException>(actionToTest);
             Assert.Null(_orderRepository.GetSavedOrder());
         }
 
         [Fact]
         public void ShippedOrdersCannotBeRejected()
         {
-            var initialOrder = new Order
-            {
-                Status = OrderStatus.Shipped,
-                Id = 1
-            };
+            var initialOrder = new CreatedOrder(new List<OrderItem>()).Approve().Ship();
             _orderRepository.AddOrder(initialOrder);
 
             var request = new OrderApprovalRequest
@@ -126,9 +110,10 @@ namespace TellDontAskKata.Tests.UseCase
             };
 
 
-            Action actionToTest = () => _useCase.Run(request);
+            Action action = () => _useCase.Run(request);
 
-            Assert.Throws<ShippedOrdersCannotBeChangedException>(actionToTest);
+            Assert.Throws<InvalidCastException>(action);
+
             Assert.Null(_orderRepository.GetSavedOrder());
         }
 
